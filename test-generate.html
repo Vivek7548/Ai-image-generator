@@ -101,7 +101,7 @@
                     width,
                     height
                 });
-                const response = await fetch('/.netlify/functions/api/generate', {
+                const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -148,7 +148,7 @@
 
                     resultElement.textContent = `Polling attempt ${attempts}...`;
 
-                    const pollUrl = `/.netlify/functions/api/prediction/${data.id}`;
+                    const pollUrl = `/api/prediction/${data.id}`;
                     console.log(`Polling ${pollUrl}`);
 
                     const pollResponse = await fetch(pollUrl);

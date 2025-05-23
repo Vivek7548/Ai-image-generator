@@ -3,19 +3,16 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const fetch = require('node-fetch');
 
-// Load environment variables from .env file in development
+// Load environment variables
 if (process.env.NODE_ENV !== 'production') {
   try {
-    console.log('Current working directory:', process.cwd()); // Debug line
     require('dotenv').config();
-    console.log('Loaded environment variables from .env file');
-    console.log('API Key present:', !!process.env.STABILITY_API_KEY); // Debug line
   } catch (error) {
     console.log('dotenv not installed, skipping .env loading');
   }
 }
+
 const app = express();
-const port = process.env.PORT || 3000;
 
 // Your Stability AI API key from environment variables
 const STABILITY_API_KEY = process.env.STABILITY_API_KEY;
@@ -25,9 +22,7 @@ if (!STABILITY_API_KEY) {
   console.error("WARNING: Stability AI API key is not set. Please set the STABILITY_API_KEY environment variable.");
 }
 
-
 // In-memory storage for tracking generation requests
-// In a production app, you would use a database
 const predictions = new Map();
 
 // Enable CORS for all routes
@@ -117,12 +112,10 @@ async function generateImage(id, prompt, width, height) {
       let errorMessage = "Failed to generate image";
       
       try {
-        // Try to parse as JSON
         const errorJson = JSON.parse(errorText);
         errorMessage = errorJson.message || errorJson.error || errorMessage;
         console.error("Stability AI API error:", errorJson);
       } catch (e) {
-        // If not JSON, use the text
         console.error("Stability AI API error (raw):", errorText);
         errorMessage = errorText || errorMessage;
       }
@@ -136,7 +129,7 @@ async function generateImage(id, prompt, width, height) {
     predictions.set(id, {
       ...predictions.get(id),
       status: "succeeded",
-      output: [result.artifacts[0].base64], // Convert base64 to URL
+      output: [result.artifacts[0].base64],
       completed_at: new Date().toISOString()
     });
     
@@ -168,8 +161,14 @@ app.get('/api/prediction/:id', async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-  console.log(`Open http://localhost:${port}/index.html to use the application`);
-});
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+    console.log(`Open http://localhost:${port}/index.html to use the application`);
+  });
+}
+
+// Export the Express API
+module.exports = app;

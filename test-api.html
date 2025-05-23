@@ -54,7 +54,7 @@
             responseElement.textContent = 'Testing function root...';
 
             try {
-                const response = await fetch('/.netlify/functions/api');
+                const response = await fetch('/api');
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
@@ -73,7 +73,7 @@
             responseElement.textContent = 'Loading...';
 
             try {
-                const response = await fetch('/.netlify/functions/api/test');
+                const response = await fetch('/api/test');
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
@@ -92,7 +92,7 @@
             responseElement.textContent = 'Testing API key...';
 
             try {
-                const response = await fetch('/.netlify/functions/api/test-api-key');
+                const response = await fetch('/api/test-api-key');
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -119,7 +119,7 @@
             responseElement.style.color = 'black';
 
             try {
-                const response = await fetch('/.netlify/functions/test');
+                const response = await fetch('/api/test');
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
@@ -139,7 +139,7 @@
             responseElement.style.color = 'black';
 
             try {
-                const response = await fetch('/.netlify/functions/api-simple/test');
+                const response = await fetch('/api/test');
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
@@ -159,7 +159,7 @@
             responseElement.style.color = 'black';
 
             try {
-                const response = await fetch('/.netlify/functions/api/predictions');
+                const response = await fetch('/api/predictions');
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
