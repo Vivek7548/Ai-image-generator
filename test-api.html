@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>API Test Page</h1>
+    <p>Use this page to test if your Netlify function is working correctly.</p>
+
+    <div>
+        <button id="testBtn">Test API Connection</button>
+        <button id="testApiKeyBtn">Test API Key</button>
+    </div>
+
+    <h2>Response:</h2>
+    <pre id="response">Click the button to test the API...</pre>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', async() => {
+            const responseElement = document.getElementById('response');
+            responseElement.textContent = 'Loading...';
+
+            try {
+                const response = await fetch('/.netlify/functions/api/test');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}\n\nTry checking the browser console for more details.`;
+                console.error('API test error:', error);
+            }
+        });
+
+        document.getElementById('testApiKeyBtn').addEventListener('click', async() => {
+            const responseElement = document.getElementById('response');
+            responseElement.textContent = 'Testing API key...';
+
+            try {
+                const response = await fetch('/.netlify/functions/api/test-api-key');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP error! Status: ${response.status}`);
+                }
+
+                responseElement.textContent = JSON.stringify(data, null, 2);
+
+                if (data.success) {
+                    responseElement.style.color = 'green';
+                } else {
+                    responseElement.style.color = 'red';
+                }
+            } catch (error) {
+                responseElement.textContent = `API Key Error: ${error.message}\n\nPlease check that your STABILITY_API_KEY environment variable is set correctly in Netlify.`;
+                responseElement.style.color = 'red';
+                console.error('API key test error:', error);
+            }
+        });
+    </script>
+</body>
+
+</html>

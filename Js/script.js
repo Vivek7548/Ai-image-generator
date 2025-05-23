@@ -100,7 +100,7 @@ const generateWithReplicate = async (prompt, aspectRatio) => {
     const { width, height } = getImageDimensions(aspectRatio);
     
     // Start the prediction using our Netlify function
-    const response = await fetch("/.netlify/functions/api/api/generate", {
+    const response = await fetch("/.netlify/functions/api/generate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -112,26 +112,45 @@ const generateWithReplicate = async (prompt, aspectRatio) => {
       })
     });
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Replicate Error:", errorData.error || "Unknown error");
-      throw new Error(errorData.error || "Failed to generate image");
+    let responseData;
+    try {
+      // Try to parse the response as JSON first
+      responseData = await response.json();
+    } catch (e) {
+      // If it's not JSON, handle the error
+      console.error("Failed to parse response as JSON:", e);
+      throw new Error(`Server returned invalid JSON. Status: ${response.status}`);
     }
     
-    const prediction = await response.json();
+    // Now check if the response was ok
+    if (!response.ok) {
+      const errorMessage = responseData.error || `Server error: ${response.status}`;
+      console.error("API Error:", errorMessage);
+      throw new Error(errorMessage);
+    }
+    
+    const prediction = responseData;
     console.log("Generation started, ID:", prediction.id);
     
     // Poll for the result using our proxy server
     let result = prediction;
     while (result.status !== "succeeded" && result.status !== "failed") {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const pollResponse = await fetch(`/.netlify/functions/api/api/prediction/${prediction.id}`);
+      const pollResponse = await fetch(`/.netlify/functions/api/prediction/${prediction.id}`);
       
-      if (!pollResponse.ok) {
-        throw new Error("Failed to check generation status");
+      let pollData;
+      try {
+        pollData = await pollResponse.json();
+      } catch (e) {
+        console.error("Failed to parse poll response as JSON:", e);
+        throw new Error("Failed to check generation status: Invalid response format");
       }
       
-      result = await pollResponse.json();
+      if (!pollResponse.ok) {
+        throw new Error(pollData.error || "Failed to check generation status");
+      }
+      
+      result = pollData;
       console.log("Generation status:", result.status);
     }
 
@@ -179,9 +198,16 @@ const generateImages = async (
         
         // Display a specific error message
         let errorMessage = "Generation failed. Check console for details.";
-        if (error.message.includes("API Key Invalid")) {
-          errorMessage = "API Key Invalid. Please check your Replicate API key.";
+        
+        // Handle specific error cases
+        if (error.message.includes("API Key Invalid") || error.message.includes("API key")) {
+          errorMessage = "API Key Invalid or Missing. Please check the server configuration.";
+        } else if (error.message.includes("JSON")) {
+          errorMessage = "Server communication error. Please try again later.";
+        } else if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+          errorMessage = "Network error. Please check your connection and try again.";
         } else if (error.message) {
+          // Use the error message directly if available
           errorMessage = error.message;
         }
         

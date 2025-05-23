@@ -27,9 +27,65 @@ const predictions = new Map();
 app.use(cors());
 app.use(express.json());
 
-// Endpoint to start a generation
-app.post('/api/generate', async (req, res) => {
+// Test endpoint to verify the function is working
+app.get('/test', (req, res) => {
+  res.json({ 
+    message: 'API is working!',
+    apiKeyPresent: !!STABILITY_API_KEY,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Test endpoint to verify API key
+app.get('/test-api-key', async (req, res) => {
   try {
+    if (!STABILITY_API_KEY) {
+      return res.status(500).json({ 
+        error: 'API key is not configured',
+        message: 'The STABILITY_API_KEY environment variable is not set'
+      });
+    }
+    
+    // Make a simple request to the Stability AI API to verify the key
+    const response = await fetch(
+      "https://api.stability.ai/v1/user/balance",
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${STABILITY_API_KEY}`,
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      return res.status(response.status).json({
+        error: 'API key validation failed',
+        message: errorData.message || 'The provided API key is invalid or has insufficient permissions',
+        statusCode: response.status
+      });
+    }
+    
+    const data = await response.json();
+    return res.json({
+      success: true,
+      message: 'API key is valid',
+      credits: data.credits || 'Unknown'
+    });
+  } catch (error) {
+    console.error('Error testing API key:', error);
+    return res.status(500).json({
+      error: 'Error testing API key',
+      message: error.message || 'An unexpected error occurred'
+    });
+  }
+});
+
+// Endpoint to start a generation
+app.post('/generate', async (req, res) => {
+  try {
+    console.log('Generate endpoint called with body:', JSON.stringify(req.body));
     const { prompt, width, height } = req.body;
     
     // Create a unique ID for this request
@@ -73,8 +129,12 @@ async function generateImage(id, prompt, width, height) {
     
     // Make the API request to Stability AI
     if (!STABILITY_API_KEY) {
+      console.error("API key missing: STABILITY_API_KEY environment variable is not set");
       throw new Error("Stability AI API key is not configured. Please set the STABILITY_API_KEY environment variable.");
     }
+    
+    // Log that we have an API key (without revealing it)
+    console.log("API key is present and will be used for the request");
     
     console.log("Making request to Stability AI API...");
     const response = await fetch(
@@ -111,11 +171,20 @@ async function generateImage(id, prompt, width, height) {
         const errorJson = JSON.parse(errorText);
         errorMessage = errorJson.message || errorJson.error || errorMessage;
         console.error("Stability AI API error:", errorJson);
+        
+        // Check for specific error types
+        if (errorJson.name === "UnauthorizedError" || errorMessage.includes("API key")) {
+          errorMessage = "Invalid API key or authorization failed";
+          console.error("API key validation failed");
+        }
       } catch (e) {
         // If not JSON, use the text
         console.error("Stability AI API error (raw):", errorText);
         errorMessage = errorText || errorMessage;
       }
+      
+      // Log the error with status code
+      console.error(`Stability AI API error (${response.status}): ${errorMessage}`);
       
       throw new Error(errorMessage);
     }
@@ -141,8 +210,9 @@ async function generateImage(id, prompt, width, height) {
 }
 
 // Endpoint to check prediction status
-app.get('/api/prediction/:id', async (req, res) => {
+app.get('/prediction/:id', async (req, res) => {
   try {
+    console.log('Prediction status endpoint called for ID:', req.params.id);
     const { id } = req.params;
     
     if (!predictions.has(id)) {

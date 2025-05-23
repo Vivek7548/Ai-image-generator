@@ -59,3 +59,31 @@ An AI Image Generator application using Stability AI's API to generate images fr
 ## Notes
 - The free tier of Netlify has some limitations, but it should be sufficient for this application
 - The in-memory storage for tracking generation requests won't persist between function calls in a serverless environment. For a production app, you would use a database.
+
+## Troubleshooting Common Issues
+
+If you encounter issues with your deployment:
+
+1. **API Key Not Working**:
+   - Double-check that the environment variable is set correctly in Netlify dashboard
+   - Verify the API key is valid by testing it locally
+   - After setting environment variables, redeploy your site
+
+2. **Function Errors**:
+   - Check the function logs in the Netlify dashboard (Functions > api > Logs)
+   - Common issues include missing dependencies or incorrect paths
+   - Test the API connection using the included test-api.html page
+
+3. **"Unexpected token '<', "<!DOCTYPE "... is not valid JSON" Error**:
+   - This means your API is returning HTML instead of JSON
+   - Check that you're using the correct API endpoint URLs
+   - Verify that your Netlify function is properly configured
+   - Check the browser console for the full error message
+
+4. **CORS Issues**:
+   - If you see CORS errors in the browser console, ensure your API function has the proper CORS headers
+   - The Express app in the Netlify function should have `app.use(cors())` enabled
+
+5. **Build Failures**:
+   - Check the deploy logs for any build errors
+   - Make sure all dependencies are correctly listed in package.json
