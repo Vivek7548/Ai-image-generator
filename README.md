@@ -74,11 +74,13 @@ If you encounter issues with your deployment:
    - Common issues include missing dependencies or incorrect paths
    - Test the API connection using the included test-api.html page
 
-3. **"Unexpected token '<', "<!DOCTYPE "... is not valid JSON" Error**:
-   - This means your API is returning HTML instead of JSON
+3. **"Unexpected token '<', "<!DOCTYPE "... is not valid JSON" Error or 404 Not Found**:
+   - This means your API is returning HTML instead of JSON or the endpoint is not found
+   - Use the included test-api.html page to test different parts of the API
    - Check that you're using the correct API endpoint URLs
    - Verify that your Netlify function is properly configured
    - Check the browser console for the full error message
+   - If you see a 404 error, make sure the routes in your Netlify function match what the frontend is expecting
 
 4. **CORS Issues**:
    - If you see CORS errors in the browser console, ensure your API function has the proper CORS headers

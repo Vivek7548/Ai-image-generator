@@ -10,6 +10,10 @@ dotenv.config();
 
 const app = express();
 
+// Set the base path for all routes to match what the frontend expects
+const router = express.Router();
+app.use('/.netlify/functions/api', router);
+
 // Your Stability AI API key from environment variables
 const STABILITY_API_KEY = process.env.STABILITY_API_KEY;
 
@@ -27,8 +31,21 @@ const predictions = new Map();
 app.use(cors());
 app.use(express.json());
 
+// Root endpoint for the function itself
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Netlify Function is running',
+    endpoints: [
+      '/.netlify/functions/api/test',
+      '/.netlify/functions/api/test-api-key',
+      '/.netlify/functions/api/generate',
+      '/.netlify/functions/api/prediction/:id'
+    ]
+  });
+});
+
 // Test endpoint to verify the function is working
-app.get('/test', (req, res) => {
+router.get('/test', (req, res) => {
   res.json({ 
     message: 'API is working!',
     apiKeyPresent: !!STABILITY_API_KEY,
@@ -37,7 +54,7 @@ app.get('/test', (req, res) => {
 });
 
 // Test endpoint to verify API key
-app.get('/test-api-key', async (req, res) => {
+router.get('/test-api-key', async (req, res) => {
   try {
     if (!STABILITY_API_KEY) {
       return res.status(500).json({ 
@@ -83,7 +100,7 @@ app.get('/test-api-key', async (req, res) => {
 });
 
 // Endpoint to start a generation
-app.post('/generate', async (req, res) => {
+router.post('/generate', async (req, res) => {
   try {
     console.log('Generate endpoint called with body:', JSON.stringify(req.body));
     const { prompt, width, height } = req.body;
@@ -210,7 +227,7 @@ async function generateImage(id, prompt, width, height) {
 }
 
 // Endpoint to check prediction status
-app.get('/prediction/:id', async (req, res) => {
+router.get('/prediction/:id', async (req, res) => {
   try {
     console.log('Prediction status endpoint called for ID:', req.params.id);
     const { id } = req.params;

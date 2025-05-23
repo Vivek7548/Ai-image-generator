@@ -37,6 +37,7 @@
     <p>Use this page to test if your Netlify function is working correctly.</p>
 
     <div>
+        <button id="rootBtn">Test Function Root</button>
         <button id="testBtn">Test API Connection</button>
         <button id="testApiKeyBtn">Test API Key</button>
     </div>
@@ -45,6 +46,25 @@
     <pre id="response">Click the button to test the API...</pre>
 
     <script>
+        document.getElementById('rootBtn').addEventListener('click', async() => {
+            const responseElement = document.getElementById('response');
+            responseElement.textContent = 'Testing function root...';
+
+            try {
+                const response = await fetch('/.netlify/functions/api');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}\n\nTry checking the browser console for more details.`;
+                console.error('Root test error:', error);
+            }
+        });
+
         document.getElementById('testBtn').addEventListener('click', async() => {
             const responseElement = document.getElementById('response');
             responseElement.textContent = 'Loading...';
