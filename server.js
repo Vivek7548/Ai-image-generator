@@ -2,11 +2,29 @@ const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const fetch = require('node-fetch');
+
+// Load environment variables from .env file in development
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    console.log('Current working directory:', process.cwd()); // Debug line
+    require('dotenv').config();
+    console.log('Loaded environment variables from .env file');
+    console.log('API Key present:', !!process.env.STABILITY_API_KEY); // Debug line
+  } catch (error) {
+    console.log('dotenv not installed, skipping .env loading');
+  }
+}
 const app = express();
 const port = process.env.PORT || 3000;
 
 // Your Stability AI API key from environment variables
-const STABILITY_API_KEY = process.env.STABILITY_API_KEY || ""; // Set this in your Render dashboard
+const STABILITY_API_KEY = process.env.STABILITY_API_KEY;
+
+// Check if API key is available
+if (!STABILITY_API_KEY) {
+  console.error("WARNING: Stability AI API key is not set. Please set the STABILITY_API_KEY environment variable.");
+}
+
 
 // In-memory storage for tracking generation requests
 // In a production app, you would use a database
@@ -64,6 +82,11 @@ async function generateImage(id, prompt, width, height) {
     });
     
     // Make the API request to Stability AI
+    if (!STABILITY_API_KEY) {
+      throw new Error("Stability AI API key is not configured. Please set the STABILITY_API_KEY environment variable.");
+    }
+    
+    console.log("Making request to Stability AI API...");
     const response = await fetch(
       "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
       {
@@ -90,8 +113,21 @@ async function generateImage(id, prompt, width, height) {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to generate image");
+      const errorText = await response.text();
+      let errorMessage = "Failed to generate image";
+      
+      try {
+        // Try to parse as JSON
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.message || errorJson.error || errorMessage;
+        console.error("Stability AI API error:", errorJson);
+      } catch (e) {
+        // If not JSON, use the text
+        console.error("Stability AI API error (raw):", errorText);
+        errorMessage = errorText || errorMessage;
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
