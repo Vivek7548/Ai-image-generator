@@ -1,0 +1,17 @@
+[build]
+  command = "npm install"
+  publish = "."
+
+[functions]
+  external_node_modules = ["express", "cors", "node-fetch", "uuid", "dotenv"]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

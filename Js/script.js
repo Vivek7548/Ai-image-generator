@@ -99,8 +99,8 @@ const generateWithReplicate = async (prompt, aspectRatio) => {
     // Convert aspect ratio to width and height
     const { width, height } = getImageDimensions(aspectRatio);
     
-    // Start the prediction using our proxy server
-    const response = await fetch("/api/generate", {
+    // Start the prediction using our Netlify function
+    const response = await fetch("/.netlify/functions/api/api/generate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -125,7 +125,7 @@ const generateWithReplicate = async (prompt, aspectRatio) => {
     let result = prediction;
     while (result.status !== "succeeded" && result.status !== "failed") {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const pollResponse = await fetch(`/api/prediction/${prediction.id}`);
+      const pollResponse = await fetch(`/.netlify/functions/api/api/prediction/${prediction.id}`);
       
       if (!pollResponse.ok) {
         throw new Error("Failed to check generation status");

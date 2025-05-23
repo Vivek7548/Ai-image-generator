@@ -4,13 +4,15 @@
     "description": "AI Image Generator using Stability AI API",
     "main": "server.js",
     "scripts": {
-        "start": "node server.js"
+        "start": "node server.js",
+        "dev": "netlify dev"
     },
     "dependencies": {
         "cors": "^2.8.5",
         "dotenv": "^16.5.0",
         "express": "^4.18.2",
         "node-fetch": "^2.7.0",
+        "serverless-http": "^3.2.0",
         "uuid": "^9.0.1"
     }
 }
