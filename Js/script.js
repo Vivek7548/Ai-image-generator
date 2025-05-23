@@ -100,7 +100,8 @@ const generateWithReplicate = async (prompt, aspectRatio) => {
     const { width, height } = getImageDimensions(aspectRatio);
     
     // Start the prediction using our Netlify function
-    const response = await fetch("/.netlify/functions/api/generate", {
+    console.log(`Sending request to generate image with prompt: "${prompt}", dimensions: ${width}x${height}`);
+    const response = await fetch("/api/generate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -111,6 +112,8 @@ const generateWithReplicate = async (prompt, aspectRatio) => {
         height: height
       })
     });
+    
+    console.log(`Received response with status: ${response.status}`);
     
     let responseData;
     try {
@@ -134,24 +137,46 @@ const generateWithReplicate = async (prompt, aspectRatio) => {
     
     // Poll for the result using our proxy server
     let result = prediction;
-    while (result.status !== "succeeded" && result.status !== "failed") {
+    console.log(`Starting to poll for result with ID: ${prediction.id}`);
+    
+    // Set a maximum number of polling attempts to avoid infinite loops
+    const maxPollingAttempts = 30; // 30 seconds
+    let pollingAttempts = 0;
+    
+    while (result.status !== "succeeded" && result.status !== "failed" && pollingAttempts < maxPollingAttempts) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const pollResponse = await fetch(`/.netlify/functions/api/prediction/${prediction.id}`);
+      pollingAttempts++;
+      
+      console.log(`Polling attempt ${pollingAttempts} for ID: ${prediction.id}`);
+      const pollUrl = `/api/prediction/${prediction.id}`;
+      console.log(`Polling URL: ${pollUrl}`);
+      
+      const pollResponse = await fetch(`/api/prediction/${prediction.id}`);
+      console.log(`Poll response status: ${pollResponse.status}`);
       
       let pollData;
       try {
         pollData = await pollResponse.json();
+        console.log(`Poll data received:`, pollData);
       } catch (e) {
         console.error("Failed to parse poll response as JSON:", e);
+        console.error("Response text:", await pollResponse.text().catch(() => "Could not get response text"));
         throw new Error("Failed to check generation status: Invalid response format");
       }
       
       if (!pollResponse.ok) {
-        throw new Error(pollData.error || "Failed to check generation status");
+        console.error("Poll response not OK:", pollData);
+        throw new Error(pollData.error || `Failed to check generation status: ${pollResponse.status}`);
       }
       
       result = pollData;
-      console.log("Generation status:", result.status);
+      console.log(`Generation status (attempt ${pollingAttempts}):`, result.status);
+    }
+    
+    // Check if we hit the maximum polling attempts
+    if (pollingAttempts >= maxPollingAttempts && result.status !== "succeeded" && result.status !== "failed") {
+      console.error("Maximum polling attempts reached without completion");
+      throw new Error("Image generation timed out. Please try again.");
     }
 
     if (result.status === "failed") {

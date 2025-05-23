@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Generate API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+        }
+        
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        .error {
+            color: red;
+        }
+        
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Test Generate API</h1>
+    <p>Use this page to test the image generation API directly.</p>
+
+    <div>
+        <h2>Generate Image</h2>
+        <div>
+            <label for="prompt">Prompt:</label>
+            <textarea id="prompt">A beautiful landscape with mountains and a lake</textarea>
+        </div>
+        <div>
+            <label for="width">Width:</label>
+            <input type="number" id="width" value="1024">
+        </div>
+        <div>
+            <label for="height">Height:</label>
+            <input type="number" id="height" value="1024">
+        </div>
+        <button id="generateBtn">Generate Image</button>
+    </div>
+
+    <h2>Response:</h2>
+    <pre id="response">Enter a prompt and click Generate...</pre>
+
+    <div id="resultContainer" style="display: none;">
+        <h2>Result:</h2>
+        <pre id="result"></pre>
+        <div id="imageContainer"></div>
+    </div>
+
+    <script>
+        document.getElementById('generateBtn').addEventListener('click', async() => {
+            const responseElement = document.getElementById('response');
+            const resultElement = document.getElementById('result');
+            const resultContainer = document.getElementById('resultContainer');
+            const imageContainer = document.getElementById('imageContainer');
+
+            responseElement.textContent = 'Sending request...';
+            responseElement.className = '';
+            resultContainer.style.display = 'none';
+            imageContainer.innerHTML = '';
+
+            const prompt = document.getElementById('prompt').value;
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+
+            if (!prompt) {
+                responseElement.textContent = 'Error: Prompt is required';
+                responseElement.className = 'error';
+                return;
+            }
+
+            try {
+                // Step 1: Start the generation
+                console.log('Sending generate request with:', {
+                    prompt,
+                    width,
+                    height
+                });
+                const response = await fetch('/.netlify/functions/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt,
+                        width,
+                        height
+                    })
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    let errorMessage = `HTTP error! Status: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorData.message || errorMessage;
+                    } catch (e) {
+                        console.error('Failed to parse error response:', e);
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+                responseElement.className = 'success';
+
+                if (!data.id) {
+                    throw new Error('No prediction ID returned from API');
+                }
+
+                // Step 2: Poll for the result
+                resultContainer.style.display = 'block';
+                resultElement.textContent = 'Polling for result...';
+
+                const maxAttempts = 30;
+                let attempts = 0;
+                let result = data;
+
+                while (result.status !== 'succeeded' && result.status !== 'failed' && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    attempts++;
+
+                    resultElement.textContent = `Polling attempt ${attempts}...`;
+
+                    const pollUrl = `/.netlify/functions/api/prediction/${data.id}`;
+                    console.log(`Polling ${pollUrl}`);
+
+                    const pollResponse = await fetch(pollUrl);
+
+                    if (!pollResponse.ok) {
+                        resultElement.textContent = `Polling error: ${pollResponse.status}`;
+                        resultElement.className = 'error';
+                        break;
+                    }
+
+                    result = await pollResponse.json();
+                    resultElement.textContent = JSON.stringify(result, null, 2);
+
+                    if (result.status === 'succeeded') {
+                        resultElement.className = 'success';
+
+                        // Display the image if available
+                        if (result.output && result.output.length > 0) {
+                            const img = document.createElement('img');
+                            img.src = `data:image/png;base64,${result.output[0]}`;
+                            img.style.maxWidth = '100%';
+                            imageContainer.appendChild(img);
+                        }
+
+                        break;
+                    } else if (result.status === 'failed') {
+                        resultElement.className = 'error';
+                        break;
+                    }
+                }
+
+                if (attempts >= maxAttempts) {
+                    resultElement.textContent = 'Polling timed out after 30 attempts';
+                    resultElement.className = 'error';
+                }
+
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+                responseElement.className = 'error';
+                console.error('Generate error:', error);
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -40,6 +40,9 @@
         <button id="rootBtn">Test Function Root</button>
         <button id="testBtn">Test API Connection</button>
         <button id="testApiKeyBtn">Test API Key</button>
+        <button id="simpleTestBtn">Test Simple Function</button>
+        <button id="simpleApiBtn">Test Simple API</button>
+        <button id="predictionsBtn">List All Predictions</button>
     </div>
 
     <h2>Response:</h2>
@@ -107,6 +110,66 @@
                 responseElement.textContent = `API Key Error: ${error.message}\n\nPlease check that your STABILITY_API_KEY environment variable is set correctly in Netlify.`;
                 responseElement.style.color = 'red';
                 console.error('API key test error:', error);
+            }
+        });
+
+        document.getElementById('simpleTestBtn').addEventListener('click', async() => {
+            const responseElement = document.getElementById('response');
+            responseElement.textContent = 'Testing simple function...';
+            responseElement.style.color = 'black';
+
+            try {
+                const response = await fetch('/.netlify/functions/test');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}\n\nTry checking the browser console for more details.`;
+                console.error('Simple test error:', error);
+            }
+        });
+
+        document.getElementById('simpleApiBtn').addEventListener('click', async() => {
+            const responseElement = document.getElementById('response');
+            responseElement.textContent = 'Testing simple API...';
+            responseElement.style.color = 'black';
+
+            try {
+                const response = await fetch('/.netlify/functions/api-simple/test');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}\n\nTry checking the browser console for more details.`;
+                console.error('Simple API error:', error);
+            }
+        });
+
+        document.getElementById('predictionsBtn').addEventListener('click', async() => {
+            const responseElement = document.getElementById('response');
+            responseElement.textContent = 'Listing all predictions...';
+            responseElement.style.color = 'black';
+
+            try {
+                const response = await fetch('/.netlify/functions/api/predictions');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}\n\nTry checking the browser console for more details.`;
+                console.error('Predictions list error:', error);
             }
         });
     </script>

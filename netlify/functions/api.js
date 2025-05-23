@@ -105,8 +105,13 @@ router.post('/generate', async (req, res) => {
     console.log('Generate endpoint called with body:', JSON.stringify(req.body));
     const { prompt, width, height } = req.body;
     
+    if (!prompt) {
+      return res.status(400).json({ error: "Prompt is required" });
+    }
+    
     // Create a unique ID for this request
     const id = uuidv4();
+    console.log(`Created new generation with ID: ${id}`);
     
     // Store the prediction with initial "starting" status
     predictions.set(id, {
@@ -120,8 +125,9 @@ router.post('/generate', async (req, res) => {
     res.json({ id, status: "starting" });
     
     // Start the actual generation process in the background
+    console.log(`Starting background generation for ID: ${id}`);
     generateImage(id, prompt, width, height).catch(error => {
-      console.error("Background generation error:", error);
+      console.error(`Background generation error for ID ${id}:`, error);
       predictions.set(id, {
         ...predictions.get(id),
         status: "failed",
@@ -131,7 +137,7 @@ router.post('/generate', async (req, res) => {
     
   } catch (error) {
     console.error("Server error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", message: error.message });
   }
 });
 
@@ -226,22 +232,53 @@ async function generateImage(id, prompt, width, height) {
   }
 }
 
+// Debug endpoint to see all predictions
+router.get('/predictions', (req, res) => {
+  try {
+    const allPredictions = Array.from(predictions.entries()).map(([id, data]) => ({
+      id,
+      status: data.status,
+      created_at: data.created_at
+    }));
+    
+    res.json({
+      count: allPredictions.length,
+      predictions: allPredictions
+    });
+  } catch (error) {
+    console.error("Error listing predictions:", error);
+    res.status(500).json({ error: "Failed to list predictions" });
+  }
+});
+
 // Endpoint to check prediction status
 router.get('/prediction/:id', async (req, res) => {
   try {
-    console.log('Prediction status endpoint called for ID:', req.params.id);
     const { id } = req.params;
+    console.log(`Prediction status endpoint called for ID: ${id}`);
+    
+    if (!id) {
+      return res.status(400).json({ error: "Prediction ID is required" });
+    }
     
     if (!predictions.has(id)) {
-      return res.status(404).json({ error: "Prediction not found" });
+      console.log(`Prediction not found for ID: ${id}`);
+      // For debugging, return all prediction IDs we have
+      const allIds = Array.from(predictions.keys());
+      return res.status(404).json({ 
+        error: "Prediction not found",
+        message: `No prediction found with ID: ${id}`,
+        availableIds: allIds.length > 0 ? allIds : "No predictions in memory"
+      });
     }
     
     const prediction = predictions.get(id);
+    console.log(`Returning prediction for ID ${id}, status: ${prediction.status}`);
     res.json(prediction);
     
   } catch (error) {
     console.error("Server error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", message: error.message });
   }
 });
 
